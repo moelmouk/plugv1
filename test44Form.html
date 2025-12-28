@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Test automatisation de saisie</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      background: #f5f5f5;
+    }
+    h1, h2 {
+      margin-bottom: 5px;
+    }
+    fieldset {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #fff;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    label {
+      display: inline-block;
+      margin: 5px 0;
+    }
+    .field-row {
+      margin-bottom: 10px;
+    }
+    input, select, textarea, button {
+      padding: 5px;
+      margin-left: 5px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    .actions {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Page de test – Automatisation de saisie</h1>
+  <p>Utilise cette page pour tester ton plugin RPA (UI Vision, etc.).</p>
+
+  <!-- Informations de base -->
+  <fieldset>
+    <legend>Informations personnelles</legend>
+
+    <div class="field-row">
+      <label for="nom">Nom :</label>
+      <input type="text" id="nom" name="nom" placeholder="Dupont" />
+    </div>
+
+    <div class="field-row">
+      <label for="prenom">Prénom :</label>
+      <input type="text" id="prenom" name="prenom" placeholder="Jean" />
+    </div>
+
+    <div class="field-row">
+      <label for="email">Email :</label>
+      <input type="email" id="email" name="email" placeholder="exemple@mail.com" />
+    </div>
+
+    <div class="field-row">
+      <label for="tel">Téléphone :</label>
+      <input type="tel" id="tel" name="tel" placeholder="+33 6 12 34 56 78" />
+    </div>
+
+    <div class="field-row">
+      <label for="password">Mot de passe :</label>
+      <input type="password" id="password" name="password" />
+    </div>
+
+    <div class="field-row">
+      <label for="age">Âge :</label>
+      <input type="number" id="age" name="age" min="0" max="120" />
+    </div>
+
+    <div class="field-row">
+      <label for="naissance">Date de naissance :</label>
+      <input type="date" id="naissance" name="naissance" />
+    </div>
+  </fieldset>
+
+  <!-- Adresses et sélections -->
+  <fieldset>
+    <legend>Adresse et préférences</legend>
+
+    <div class="field-row">
+      <label for="adresse">Adresse :</label>
+      <input type="text" id="adresse" name="adresse" style="width: 60%;" />
+    </div>
+
+    <div class="field-row">
+      <label for="cp">Code postal :</label>
+      <input type="text" id="cp" name="cp" size="6" />
+      <label for="ville">Ville :</label>
+      <input type="text" id="ville" name="ville" />
+    </div>
+
+    <div class="field-row">
+      <label for="pays">Pays :</label>
+      <select id="pays" name="pays">
+        <option value="">-- Sélectionner --</option>
+        <option value="fr">France</option>
+        <option value="be">Belgique</option>
+        <option value="ch">Suisse</option>
+        <option value="ca">Canada</option>
+        <option value="autre">Autre</option>
+      </select>
+    </div>
+
+    <div class="field-row">
+      <span>Genre :</span>
+      <label><input type="radio" name="genre" value="homme" /> Homme</label>
+      <label><input type="radio" name="genre" value="femme" /> Femme</label>
+      <label><input type="radio" name="genre" value="autre" /> Autre</label>
+    </div>
+
+    <div class="field-row">
+      <span>Centres d’intérêt :</span><br />
+      <label><input type="checkbox" name="interets" value="sport" /> Sport</label>
+      <label><input type="checkbox" name="interets" value="musique" /> Musique</label>
+      <label><input type="checkbox" name="interets" value="informatique" /> Informatique</label>
+      <label><input type="checkbox" name="interets" value="voyage" /> Voyage</label>
+    </div>
+  </fieldset>
+
+  <!-- Champs avancés -->
+  <fieldset>
+    <legend>Champs avancés</legend>
+
+    <div class="field-row">
+      <label for="site">Site web :</label>
+      <input type="url" id="site" name="site" placeholder="https://exemple.com" />
+    </div>
+
+    <div class="field-row">
+      <label for="couleur">Couleur préférée :</label>
+      <input type="color" id="couleur" name="couleur" value="#00aaff" />
+    </div>
+
+    <div class="field-row">
+      <label for="volume">Volume (range) :</label>
+      <input type="range" id="volume" name="volume" min="0" max="100" value="50" />
+    </div>
+
+    <div class="field-row">
+      <label for="heure">Heure préférée :</label>
+      <input type="time" id="heure" name="heure" />
+    </div>
+
+    <div class="field-row">
+      <label for="mois">Mois :</label>
+      <input type="month" id="mois" name="mois" />
+    </div>
+
+    <div class="field-row">
+      <label for="fichier">Uploader un fichier :</label>
+      <input type="file" id="fichier" name="fichier" />
+    </div>
+
+    <div class="field-row">
+      <label for="commentaire">Commentaire :</label><br />
+      <textarea id="commentaire" name="commentaire" rows="4" cols="60"
+        placeholder="Tape ton texte ici..."></textarea>
+    </div>
+  </fieldset>
+
+  <!-- Tableau de données (utile pour boucles RPA) -->
+  <fieldset>
+    <legend>Tableau de données</legend>
+
+    <p>Ce tableau est utile pour tester les boucles et la navigation cellule par cellule.</p>
+
+    <table id="table-test">
+      <thead>
+        <tr>
+          <th>Ligne</th>
+          <th>Produit</th>
+          <th>Quantité</th>
+          <th>Prix unitaire</th>
+          <th>Commentaire</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><input type="text" name="prod_1" value="Produit A" /></td>
+          <td><input type="number" name="qty_1" value="1" /></td>
+          <td><input type="number" name="price_1" value="10" step="0.01" /></td>
+          <td><input type="text" name="note_1" value="Test 1" /></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><input type="text" name="prod_2" value="Produit B" /></td>
+          <td><input type="number" name="qty_2" value="2" /></td>
+          <td><input type="number" name="price_2" value="20" step="0.01" /></td>
+          <td><input type="text" name="note_2" value="Test 2" /></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><input type="text" name="prod_3" value="Produit C" /></td>
+          <td><input type="number" name="qty_3" value="3" /></td>
+          <td><input type="number" name="price_3" value="30" step="0.01" /></td>
+          <td><input type="text" name="note_3" value="Test 3" /></td>
+        </tr>
+      </tbody>
+    </table>
+  </fieldset>
+
+  <!-- Boutons / actions -->
+  <fieldset>
+    <legend>Actions</legend>
+
+    <div class="actions">
+      <button type="button" id="btn-remplir">Remplir automatiquement (JS)</button>
+      <button type="reset">Réinitialiser le formulaire</button>
+      <button type="button" id="btn-fausse-submit">Simuler un envoi</button>
+    </div>
+
+    <p id="status" style="margin-top:10px; font-weight:bold;"></p>
+  </fieldset>
+
+  <script>
+    // Petit script pour tester aussi les clics et le DOM
+
+    document.getElementById('btn-remplir').addEventListener('click', function () {
+      document.getElementById('nom').value = 'Durand';
+      document.getElementById('prenom').value = 'Marie';
+      document.getElementById('email').value = 'marie.durand@example.com';
+      document.getElementById('tel').value = '+33 6 11 22 33 44';
+      document.getElementById('age').value = 28;
+      document.getElementById('naissance').value = '1997-01-15';
+      document.getElementById('adresse').value = '10 rue de la Paix';
+      document.getElementById('cp').value = '75001';
+      document.getElementById('ville').value = 'Paris';
+      document.getElementById('pays').value = 'fr';
+      document.querySelector('input[name="genre"][value="femme"]').checked = true;
+
+      // Cocher 2 centres d’intérêt
+      document.querySelector('input[name="interets"][value="informatique"]').checked = true;
+      document.querySelector('input[name="interets"][value="voyage"]').checked = true;
+
+      document.getElementById('site').value = 'https://www.example.com';
+      document.getElementById('couleur').value = '#ff0000';
+      document.getElementById('volume').value = 75;
+      document.getElementById('heure').value = '14:30';
+      document.getElementById('mois').value = '2025-12';
+      document.getElementById('commentaire').value = 'Ce texte a été rempli automatiquement via JavaScript.';
+
+      // Tableau
+      document.querySelector('input[name="prod_1"]').value = 'Clavier';
+      document.querySelector('input[name="qty_1"]').value = '5';
+      document.querySelector('input[name="price_1"]').value = '49.99';
+
+      document.getElementById('status').textContent = 'Champs remplis automatiquement.';
+    });
+
+    document.getElementById('btn-fausse-submit').addEventListener('click', function () {
+      document.getElementById('status').textContent = 'Envoi simulé (aucune donnée réellement envoyée).';
+      alert('Formulaire soumis (simulation pour test RPA).');
+    });
+  </script>
+
+</body>
+</html>
