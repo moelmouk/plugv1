@@ -1256,11 +1256,11 @@
     <div class="modal">
       <div class="modal-header">
         <span class="modal-title">✏️ Modifier l'action</span>
-        <button class="modal-close" onclick="closeModal('editActionModal')">×</button>
+        <button id="btnCloseEditModal" class="modal-close">×</button>
       </div>
       <div id="editActionForm"></div>
       <div class="modal-footer">
-        <button class="btn btn-sm" onclick="closeModal('editActionModal')">Annuler</button>
+        <button id="btnCancelEdit" class="btn btn-sm">Annuler</button>
         <button id="btnSaveEdit" class="btn btn-primary btn-sm">Sauvegarder</button>
       </div>
     </div>
@@ -1271,7 +1271,7 @@
     <div class="modal">
       <div class="modal-header">
         <span class="modal-title">💾 Sauvegarder la macro</span>
-        <button class="modal-close" onclick="closeModal('saveMacroModal')">×</button>
+        <button id="btnCloseSaveMacro" class="modal-close">×</button>
       </div>
       <div class="form-group">
         <label class="form-label">Nom de la macro</label>
@@ -1288,7 +1288,7 @@
         </select>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-sm" onclick="closeModal('saveMacroModal')">Annuler</button>
+        <button id="btnCancelSaveMacro" class="btn btn-sm">Annuler</button>
         <button id="btnConfirmSaveMacro" class="btn btn-primary btn-sm">Sauvegarder</button>
       </div>
     </div>
@@ -1299,14 +1299,14 @@
     <div class="modal">
       <div class="modal-header">
         <span class="modal-title">📁 Nouveau dossier</span>
-        <button class="modal-close" onclick="closeModal('newFolderModal')">×</button>
+        <button id="btnCloseNewFolder" class="modal-close">×</button>
       </div>
       <div class="form-group">
         <label class="form-label">Nom du dossier</label>
         <input type="text" id="folderName" class="input" placeholder="Mon dossier" />
       </div>
       <div class="modal-footer">
-        <button class="btn btn-sm" onclick="closeModal('newFolderModal')">Annuler</button>
+        <button id="btnCancelNewFolder" class="btn btn-sm">Annuler</button>
         <button id="btnConfirmNewFolder" class="btn btn-primary btn-sm">Créer</button>
       </div>
     </div>
