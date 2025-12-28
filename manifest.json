@@ -1,17 +1,31 @@
 {
   "manifest_version": 3,
   "name": "Plugin Rec Pro",
-  "description": "Extension légère: enregistre et rejoue des actions (click/input) sur la page.",
-  "version": "0.1.0",
+  "description": "Extension RPA avancée: enregistre et rejoue des scénarios complets (Angular, variables, boucles, debug).",
+  "version": "2.0.0",
   "action": {
     "default_title": "Plugin Rec Pro",
-    "default_popup": "popup.html"
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   },
   "permissions": [
     "storage",
     "activeTab",
     "tabs",
-    "scripting"
+    "scripting",
+    "downloads",
+    "notifications",
+    "clipboardRead",
+    "clipboardWrite"
   ],
   "host_permissions": [
     "<all_urls>"
@@ -23,8 +37,15 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content-script.js"],
+      "css": ["content-styles.css"],
       "run_at": "document_start",
       "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*"],
+      "matches": ["<all_urls>"]
     }
   ]
 }
