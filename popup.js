@@ -1,5 +1,6 @@
 // popup.js - Plugin Rec Pro v2.0
 // Interface utilisateur complète avec gestion macros, variables, debug
+// CSP compliant - No inline event handlers
 
 (() => {
   'use strict';
@@ -13,6 +14,7 @@
   let selectedActionType = 'waitForSelector';
   let editingActionId = null;
   let draggedItem = null;
+  let actionsCache = [];
 
   // ============== INITIALIZATION ==============
 
@@ -79,14 +81,22 @@
     elements.editActionModal = document.getElementById('editActionModal');
     elements.editActionForm = document.getElementById('editActionForm');
     elements.btnSaveEdit = document.getElementById('btnSaveEdit');
+    elements.btnCloseEditModal = document.getElementById('btnCloseEditModal');
+    elements.btnCancelEdit = document.getElementById('btnCancelEdit');
+    
     elements.saveMacroModal = document.getElementById('saveMacroModal');
     elements.macroName = document.getElementById('macroName');
     elements.macroTags = document.getElementById('macroTags');
     elements.macroFolder = document.getElementById('macroFolder');
     elements.btnConfirmSaveMacro = document.getElementById('btnConfirmSaveMacro');
+    elements.btnCloseSaveMacro = document.getElementById('btnCloseSaveMacro');
+    elements.btnCancelSaveMacro = document.getElementById('btnCancelSaveMacro');
+    
     elements.newFolderModal = document.getElementById('newFolderModal');
     elements.folderName = document.getElementById('folderName');
     elements.btnConfirmNewFolder = document.getElementById('btnConfirmNewFolder');
+    elements.btnCloseNewFolder = document.getElementById('btnCloseNewFolder');
+    elements.btnCancelNewFolder = document.getElementById('btnCancelNewFolder');
   }
 
   function initEventListeners() {
@@ -101,7 +111,7 @@
     // Record controls
     elements.btnStart.addEventListener('click', startRecording);
     elements.btnStop.addEventListener('click', stopRecording);
-    elements.btnPlay.addEventListener('click', playRecording);
+    elements.btnPlay.addEventListener('click', () => playRecording(false));
     elements.btnClear.addEventListener('click', clearRecording);
     elements.btnPause.addEventListener('click', togglePause);
     elements.btnStep.addEventListener('click', stepForward);
@@ -142,9 +152,99 @@
 
     // Edit modal
     elements.btnSaveEdit.addEventListener('click', saveEditedAction);
+    elements.btnCloseEditModal.addEventListener('click', () => closeModal('editActionModal'));
+    elements.btnCancelEdit.addEventListener('click', () => closeModal('editActionModal'));
+    
+    // Save macro modal
+    elements.btnCloseSaveMacro.addEventListener('click', () => closeModal('saveMacroModal'));
+    elements.btnCancelSaveMacro.addEventListener('click', () => closeModal('saveMacroModal'));
+    
+    // New folder modal
+    elements.btnCloseNewFolder.addEventListener('click', () => closeModal('newFolderModal'));
+    elements.btnCancelNewFolder.addEventListener('click', () => closeModal('newFolderModal'));
+
+    // Modal overlay click to close
+    document.querySelectorAll('.modal-overlay').forEach(overlay => {
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          overlay.classList.remove('active');
+        }
+      });
+    });
+
+    // Delegated event listeners for dynamic content
+    elements.stepsList.addEventListener('click', handleStepsListClick);
+    elements.macrosList.addEventListener('click', handleMacrosListClick);
+    elements.foldersList.addEventListener('click', handleFoldersListClick);
+    elements.varsList.addEventListener('click', handleVarsListClick);
 
     // Listen for messages from background/content
     chrome.runtime.onMessage.addListener(handleMessage);
+  }
+
+  // ============== DELEGATED EVENT HANDLERS ==============
+
+  function handleStepsListClick(e) {
+    const btn = e.target.closest('.step-btn');
+    if (!btn) return;
+
+    const stepItem = btn.closest('.step-item');
+    if (!stepItem) return;
+
+    const id = stepItem.dataset.id;
+    const index = parseInt(stepItem.dataset.index);
+
+    if (btn.classList.contains('edit-btn')) {
+      editStep(id);
+    } else if (btn.classList.contains('up-btn')) {
+      moveStep(id, -1);
+    } else if (btn.classList.contains('down-btn')) {
+      moveStep(id, 1);
+    } else if (btn.classList.contains('delete-btn')) {
+      deleteStep(id);
+    }
+  }
+
+  function handleMacrosListClick(e) {
+    const btn = e.target.closest('.btn');
+    if (!btn) return;
+
+    const macroItem = btn.closest('.macro-item');
+    if (!macroItem) return;
+
+    const id = macroItem.dataset.id;
+
+    if (btn.classList.contains('play-btn')) {
+      playMacro(id);
+    } else if (btn.classList.contains('load-btn')) {
+      loadMacro(id);
+    } else if (btn.classList.contains('duplicate-btn')) {
+      duplicateMacro(id);
+    } else if (btn.classList.contains('delete-btn')) {
+      deleteMacro(id);
+    }
+  }
+
+  function handleFoldersListClick(e) {
+    const btn = e.target.closest('.delete-btn');
+    if (!btn) return;
+
+    const folderItem = btn.closest('.folder-item');
+    if (!folderItem) return;
+
+    const id = folderItem.dataset.id;
+    deleteFolder(id);
+  }
+
+  function handleVarsListClick(e) {
+    const btn = e.target.closest('.delete-btn');
+    if (!btn) return;
+
+    const varItem = btn.closest('.var-item');
+    if (!varItem) return;
+
+    const name = varItem.dataset.name;
+    deleteVariable(name);
   }
 
   // ============== TAB MANAGEMENT ==============
@@ -191,7 +291,7 @@
   async function refreshStatus() {
     try {
       const response = await sendMessage({ type: 'getStatus' });
-      if (response?.ok) {
+      if (response && response.ok) {
         updateStatus(response.state);
       }
     } catch (e) {
@@ -244,7 +344,7 @@
   async function startRecording() {
     try {
       const response = await sendMessage({ type: 'startRecording', debug: elements.debugHighlight.checked });
-      if (response?.ok) {
+      if (response && response.ok) {
         updateStatus(response.state);
         refreshSteps();
       } else {
@@ -258,7 +358,7 @@
   async function stopRecording() {
     try {
       const response = await sendMessage({ type: 'stopRecording', saveMacro: false });
-      if (response?.ok) {
+      if (response && response.ok) {
         updateStatus(response.state);
         refreshSteps();
       }
@@ -267,13 +367,13 @@
     }
   }
 
-  async function playRecording(debugMode = false) {
+  async function playRecording(debugMode) {
     try {
       const response = await sendMessage({
         type: 'playRecording',
         debug: debugMode || elements.debugHighlight.checked
       });
-      if (response?.ok) {
+      if (response && response.ok) {
         refreshStatus();
       } else {
         alert('Erreur: ' + (response?.error || 'Impossible de jouer'));
@@ -288,7 +388,7 @@
 
     try {
       const response = await sendMessage({ type: 'clearRecording' });
-      if (response?.ok) {
+      if (response && response.ok) {
         updateStatus(response.state);
         refreshSteps();
       }
@@ -300,7 +400,7 @@
   async function togglePause() {
     try {
       const response = await sendMessage({ type: 'playPause' });
-      if (response?.ok) {
+      if (response && response.ok) {
         refreshStatus();
       }
     } catch (e) {
@@ -319,7 +419,7 @@
   async function stopPlayback() {
     try {
       const response = await sendMessage({ type: 'playStop' });
-      if (response?.ok) {
+      if (response && response.ok) {
         refreshStatus();
       }
     } catch (e) {
@@ -332,8 +432,9 @@
   async function refreshSteps() {
     try {
       const response = await sendMessage({ type: 'getActions' });
-      if (response?.ok) {
-        renderSteps(response.actions || []);
+      if (response && response.ok) {
+        actionsCache = response.actions || [];
+        renderSteps(actionsCache);
       }
     } catch (e) {
       console.error('Error refreshing steps:', e);
@@ -367,10 +468,10 @@
           </div>
         </div>
         <div class="step-actions">
-          <button class="step-btn" onclick="editStep('${action.id}')" title="Modifier">✏️</button>
-          <button class="step-btn" onclick="moveStep('${action.id}', -1)" title="Monter">⬆</button>
-          <button class="step-btn" onclick="moveStep('${action.id}', 1)" title="Descendre">⬇</button>
-          <button class="step-btn delete" onclick="deleteStep('${action.id}')" title="Supprimer">🗑</button>
+          <button class="step-btn edit-btn" title="Modifier">✏️</button>
+          <button class="step-btn up-btn" title="Monter">⬆</button>
+          <button class="step-btn down-btn" title="Descendre">⬇</button>
+          <button class="step-btn delete-btn" title="Supprimer">🗑</button>
         </div>
       </li>
     `).join('');
@@ -413,53 +514,42 @@
         const newOrder = Array.from(elements.stepsList.querySelectorAll('.step-item'))
           .map(el => el.dataset.id);
 
-        const response = await sendMessage({ type: 'getActions' });
-        if (response?.ok) {
-          const actions = response.actions;
-          const reordered = newOrder.map(id => actions.find(a => a.id === id)).filter(Boolean);
-          await sendMessage({ type: 'reorderActions', actions: reordered });
-          refreshSteps();
-        }
+        const reordered = newOrder.map(id => actionsCache.find(a => a.id === id)).filter(Boolean);
+        await sendMessage({ type: 'reorderActions', actions: reordered });
+        refreshSteps();
       });
     });
   }
 
-  // Global functions for onclick
-  window.editStep = async function(id) {
-    const response = await sendMessage({ type: 'getActions' });
-    if (!response?.ok) return;
-
-    const action = response.actions.find(a => a.id === id);
+  async function editStep(id) {
+    const action = actionsCache.find(a => a.id === id);
     if (!action) return;
 
     editingActionId = id;
     renderEditForm(action);
     openModal('editActionModal');
-  };
+  }
 
-  window.moveStep = async function(id, direction) {
-    const response = await sendMessage({ type: 'getActions' });
-    if (!response?.ok) return;
-
-    const actions = response.actions;
-    const index = actions.findIndex(a => a.id === id);
+  async function moveStep(id, direction) {
+    const index = actionsCache.findIndex(a => a.id === id);
     if (index === -1) return;
 
     const newIndex = index + direction;
-    if (newIndex < 0 || newIndex >= actions.length) return;
+    if (newIndex < 0 || newIndex >= actionsCache.length) return;
 
     // Swap
+    const actions = [...actionsCache];
     [actions[index], actions[newIndex]] = [actions[newIndex], actions[index]];
 
     await sendMessage({ type: 'reorderActions', actions });
     refreshSteps();
-  };
+  }
 
-  window.deleteStep = async function(id) {
+  async function deleteStep(id) {
     await sendMessage({ type: 'deleteAction', actionId: id });
     refreshSteps();
     refreshStatus();
-  };
+  }
 
   // ============== ACTION FORM ==============
 
@@ -552,14 +642,23 @@
     const action = { type: selectedActionType };
 
     // Get form values based on action type
-    const selector = document.getElementById('actionSelector')?.value?.trim();
-    const value = document.getElementById('actionValue')?.value;
-    const text = document.getElementById('actionText')?.value;
-    const url = document.getElementById('actionUrl')?.value?.trim();
-    const varName = document.getElementById('actionVarName')?.value?.trim();
-    const condition = document.getElementById('actionCondition')?.value?.trim();
-    const count = document.getElementById('actionCount')?.value;
-    const duration = document.getElementById('actionDuration')?.value;
+    const selectorEl = document.getElementById('actionSelector');
+    const valueEl = document.getElementById('actionValue');
+    const textEl = document.getElementById('actionText');
+    const urlEl = document.getElementById('actionUrl');
+    const varNameEl = document.getElementById('actionVarName');
+    const conditionEl = document.getElementById('actionCondition');
+    const countEl = document.getElementById('actionCount');
+    const durationEl = document.getElementById('actionDuration');
+
+    const selector = selectorEl?.value?.trim();
+    const value = valueEl?.value;
+    const text = textEl?.value;
+    const url = urlEl?.value?.trim();
+    const varName = varNameEl?.value?.trim();
+    const condition = conditionEl?.value?.trim();
+    const count = countEl?.value;
+    const duration = durationEl?.value;
 
     if (selector) action.selector = selector;
     if (value !== undefined && value !== '') action.value = value;
@@ -680,23 +779,23 @@
 
     const updates = {};
 
-    const selector = document.getElementById('editSelector')?.value;
-    const value = document.getElementById('editValue')?.value;
-    const text = document.getElementById('editText')?.value;
-    const url = document.getElementById('editUrl')?.value;
-    const condition = document.getElementById('editCondition')?.value;
-    const count = document.getElementById('editCount')?.value;
-    const duration = document.getElementById('editDuration')?.value;
-    const varName = document.getElementById('editVarName')?.value;
+    const selectorEl = document.getElementById('editSelector');
+    const valueEl = document.getElementById('editValue');
+    const textEl = document.getElementById('editText');
+    const urlEl = document.getElementById('editUrl');
+    const conditionEl = document.getElementById('editCondition');
+    const countEl = document.getElementById('editCount');
+    const durationEl = document.getElementById('editDuration');
+    const varNameEl = document.getElementById('editVarName');
 
-    if (selector !== undefined) updates.selector = selector;
-    if (value !== undefined) updates.value = value;
-    if (text !== undefined) updates.text = text;
-    if (url !== undefined) updates.url = url;
-    if (condition !== undefined) updates.condition = condition;
-    if (count !== undefined) updates.count = parseInt(count);
-    if (duration !== undefined) updates.duration = parseInt(duration);
-    if (varName !== undefined) updates.varName = varName;
+    if (selectorEl) updates.selector = selectorEl.value;
+    if (valueEl) updates.value = valueEl.value;
+    if (textEl) updates.text = textEl.value;
+    if (urlEl) updates.url = urlEl.value;
+    if (conditionEl) updates.condition = conditionEl.value;
+    if (countEl) updates.count = parseInt(countEl.value);
+    if (durationEl) updates.duration = parseInt(durationEl.value);
+    if (varNameEl) updates.varName = varNameEl.value;
 
     await sendMessage({ type: 'updateAction', actionId: editingActionId, updates });
 
@@ -746,15 +845,17 @@
 
   // ============== MACROS ==============
 
+  let macrosCache = [];
+
   async function refreshMacros() {
     const response = await sendMessage({ type: 'getMacros' });
     if (!response?.ok) return;
 
-    const macros = response.macros || [];
-    elements.macrosCount.textContent = macros.length;
-    elements.macrosTotalCount.textContent = macros.length;
+    macrosCache = response.macros || [];
+    elements.macrosCount.textContent = macrosCache.length;
+    elements.macrosTotalCount.textContent = macrosCache.length;
 
-    if (macros.length === 0) {
+    if (macrosCache.length === 0) {
       elements.macrosList.innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">📚</div>
@@ -764,7 +865,7 @@
       return;
     }
 
-    elements.macrosList.innerHTML = macros.map(macro => `
+    elements.macrosList.innerHTML = macrosCache.map(macro => `
       <div class="macro-item" data-id="${macro.id}">
         <span class="macro-icon">📜</span>
         <div class="macro-info">
@@ -776,10 +877,10 @@
           ${macro.tags?.length ? `<div>${macro.tags.map(t => `<span class="macro-tag">${escapeHtml(t)}</span>`).join(' ')}</div>` : ''}
         </div>
         <div class="macro-actions">
-          <button class="btn btn-sm btn-success" onclick="playMacro('${macro.id}')" title="Jouer">▶</button>
-          <button class="btn btn-sm" onclick="loadMacro('${macro.id}')" title="Charger">📥</button>
-          <button class="btn btn-sm" onclick="duplicateMacro('${macro.id}')" title="Dupliquer">📋</button>
-          <button class="btn btn-sm btn-danger" onclick="deleteMacro('${macro.id}')" title="Supprimer">🗑</button>
+          <button class="btn btn-sm btn-success play-btn" title="Jouer">▶</button>
+          <button class="btn btn-sm load-btn" title="Charger">📥</button>
+          <button class="btn btn-sm duplicate-btn" title="Dupliquer">📋</button>
+          <button class="btn btn-sm btn-danger delete-btn" title="Supprimer">🗑</button>
         </div>
       </div>
     `).join('');
@@ -801,7 +902,7 @@
         <div class="folder-item" data-id="${folder.id}">
           <span class="folder-icon">📁</span>
           <span>${escapeHtml(folder.name)}</span>
-          <button class="step-btn delete" onclick="deleteFolder('${folder.id}')" style="margin-left: auto;">🗑</button>
+          <button class="step-btn delete-btn" style="margin-left: auto;">🗑</button>
         </div>
       `).join('');
     } else {
@@ -861,8 +962,7 @@
     refreshFolders();
   }
 
-  // Global functions
-  window.playMacro = async function(id) {
+  async function playMacro(id) {
     const response = await sendMessage({ type: 'playMacro', macroId: id, debug: elements.debugHighlight.checked });
     if (response?.ok) {
       switchTab('record');
@@ -870,38 +970,35 @@
     } else {
       alert('Erreur: ' + (response?.error || 'Impossible de jouer'));
     }
-  };
+  }
 
-  window.loadMacro = async function(id) {
-    const macrosResponse = await sendMessage({ type: 'getMacros' });
-    if (!macrosResponse?.ok) return;
-
-    const macro = macrosResponse.macros.find(m => m.id === id);
+  async function loadMacro(id) {
+    const macro = macrosCache.find(m => m.id === id);
     if (!macro) return;
 
     await sendMessage({ type: 'setActions', actions: macro.actions });
     switchTab('record');
     refreshSteps();
     refreshStatus();
-  };
+  }
 
-  window.duplicateMacro = async function(id) {
+  async function duplicateMacro(id) {
     await sendMessage({ type: 'duplicateMacro', macroId: id });
     refreshMacros();
-  };
+  }
 
-  window.deleteMacro = async function(id) {
+  async function deleteMacro(id) {
     if (!confirm('Supprimer cette macro ?')) return;
     await sendMessage({ type: 'deleteMacro', macroId: id });
     refreshMacros();
-  };
+  }
 
-  window.deleteFolder = async function(id) {
+  async function deleteFolder(id) {
     if (!confirm('Supprimer ce dossier ? Les macros seront déplacées hors du dossier.')) return;
     await sendMessage({ type: 'deleteFolder', folderId: id });
     refreshFolders();
     refreshMacros();
-  };
+  }
 
   // ============== VARIABLES ==============
 
@@ -924,10 +1021,10 @@
     }
 
     elements.varsList.innerHTML = entries.map(([name, value]) => `
-      <div class="var-item">
+      <div class="var-item" data-name="${escapeHtml(name)}">
         <span class="var-name">\${${escapeHtml(name)}}</span>
         <span class="var-value" title="${escapeHtml(String(value))}">${escapeHtml(truncate(String(value), 30))}</span>
-        <button class="step-btn delete" onclick="deleteVariable('${escapeHtml(name)}')">🗑</button>
+        <button class="step-btn delete-btn">🗑</button>
       </div>
     `).join('');
   }
@@ -952,13 +1049,13 @@
     refreshVariables();
   }
 
-  window.deleteVariable = async function(name) {
+  async function deleteVariable(name) {
     const response = await sendMessage({ type: 'getVariables' });
     const vars = response?.variables || {};
     delete vars[name];
     await sendMessage({ type: 'setVariables', variables: vars });
     refreshVariables();
-  };
+  }
 
   // ============== DEBUG ==============
 
@@ -1041,15 +1138,22 @@
     document.getElementById(modalId).classList.add('active');
   }
 
-  window.closeModal = function(modalId) {
+  function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('active');
-  };
+  }
 
   // ============== MESSAGES ==============
 
   function sendMessage(msg) {
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage(msg, resolve);
+      chrome.runtime.sendMessage(msg, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn('Message error:', chrome.runtime.lastError.message);
+          resolve({ ok: false, error: chrome.runtime.lastError.message });
+        } else {
+          resolve(response);
+        }
+      });
     });
   }
 
